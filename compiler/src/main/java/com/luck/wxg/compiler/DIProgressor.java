@@ -13,6 +13,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -39,9 +40,11 @@ public class DIProgressor extends AbstractProcessor {
                 for (Element element: elementsAnnotationWith) {
                     TypeMirror typeMirror = element.asType();
                     DIActivity annotation = element.getAnnotation(DIActivity.class);
+                    System.out.print("@@@@@@@@@@@@@@@@@@@" + typeMirror);
                     if (typesUtils.isSubtype(typeMirror, typeElement.asType())) {
                         TypeElement classElement = (TypeElement) element;
                         //参数名
+                        System.out.println("``````````````````");
                         ParameterSpec atlas = ParameterSpec.builder(ClassName.get(typeMirror), "activity").build();
                         //创建方法
                         MethodSpec.Builder method = MethodSpec.methodBuilder("findById")
@@ -55,14 +58,30 @@ public class DIProgressor extends AbstractProcessor {
                             if (diView == null) {
                                 continue;
                             }
-//                            method.addStatement(String.format("activity.%s = (%s) activity.findViewById(%s)"),
-//                                    member.getSimpleName(), //注解节点变量的名称
-//                                    ClassName.get(member.asType().toString(),
-//                                            diView.value()));
+
+                            method.addStatement(String.format("activity.%s = (%s) activity.findViewById(%s)",
+                                    member.getSimpleName(),//注解节点变量的名称
+                                    ClassName.get(member.asType()).toString(),//注解节点变量的类型
+                                    diView.value()));//注解的值
+                            System.out.print("method:::::::::" + member.getSimpleName());
                         }
+                        //创建类
+                        TypeSpec typeSpec = TypeSpec.classBuilder("ManagerFindBy" + element.getSimpleName())
+                                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                                .build();
+                        //创建Javaclass 文件
+                        JavaFile javaFile = JavaFile.builder("com.luck.wxg.find.by", typeSpec).build();
+                        try {
+                            javaFile.writeTo(processingEnv.getFiler());
+                        }catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }else {
+                        throw new IllegalArgumentException("@DIActivity must of Activity");
                     }
                 }
             }
+            return true;
         }
         return false;
     }
